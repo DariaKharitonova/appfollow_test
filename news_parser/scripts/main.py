@@ -1,25 +1,44 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, jsonify
+from sqlalchemy import desc, asc
+from flask import jsonify
 from news_parser.news import Post
-import os
 from news_parser.get_news import insert_to_db
 from apscheduler.schedulers.background import BackgroundScheduler
+from webargs import fields
+from webargs.flaskparser import use_args
+from marshmallow import validate
+from news_parser.settings import app, db
+from datetime import datetime
 
-scheduler = BackgroundScheduler()
 
-app = Flask(__name__)
-db_path = os.path.join(os.path.dirname(__file__), '../news_history.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(db_path)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+def main():
+    scheduler = BackgroundScheduler()
 
-db = SQLAlchemy(app)
+    db.create_all()
+    db.session.commit()
 
-insert_to_db()
-scheduler.add_job(insert_to_db, trigger='interval', minutes=10)
-scheduler.start()
+    scheduler.start()
+    scheduler.add_job(insert_to_db, trigger='interval', minutes=10, next_run_time=datetime.now())
+
+    app.run()
 
 
 @app.route('/posts', methods=['GET'])  # to get all news
-def get_news_history():
-    posts = Post.query.all()
+@use_args({
+    "offset": fields.Int(missing=0, validate=lambda n: n >= 0),
+    "limit": fields.Int(missing=5, validate=lambda n: n >= 0),
+    "order": fields.String(missing="id", validate=validate.OneOf(['id', 'title', 'link', 'post_id', 'created_at'])),
+    'sort': fields.String(missing='asc', validate=validate.OneOf(['asc', 'desc']))
+    },
+    location="query")
+def get_news_history(args):
+    offset = args.get('offset')
+    limit = args.get('limit')
+    order = args.get('order')
+    sort = asc if args.get('sort') == 'asc' else desc
+
+    posts = Post.query.order_by(sort(order)).offset(offset).limit(limit).all()
     return jsonify(Post.serialize_list(posts))
+
+
+if __name__ == "__main__":
+    main()

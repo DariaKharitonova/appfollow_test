@@ -2,7 +2,7 @@ install:
 	@poetry install
 
 test:
-	@poetry run pytest --cov-report term --cov-report xml --cov=news_parser news_parser tests
+	@poetry run pytest -vv
 
 lint:
 	@poetry run flake8 page_loader tests

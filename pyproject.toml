@@ -11,6 +11,9 @@ packages = [
 python = "^3.8"
 beautifulsoup4 = "^4.9.3"
 requests = "^2.25.1"
+webargs = "^7.0.1"
+pytest = "^6.2.2"
+pytest-flask-sqlalchemy = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.4"
